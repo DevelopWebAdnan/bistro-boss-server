@@ -32,8 +32,28 @@ async function run() {
     const reviewCollection = client.db("bistroDb").collection("reviews");
     const cartCollection = client.db("bistroDb").collection("carts");
 
+    
+    // auth related api
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+      res.send({ token });
+    })
+
+    // middleware
+    const verifyToken = (req, res, next) => {
+      console.log('in verify token', req.headers);
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "unauthorized access!" });
+      }
+      const token = req.headers.authorization.split(' ')[1];
+
+      // next();
+    }
+
+
     // users related api
-    app.get('/users', async (req, res) => {
+    app.get('/users', verifyToken, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
