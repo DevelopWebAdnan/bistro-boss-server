@@ -213,6 +213,18 @@ async function run() {
       })
     });
 
+    app.get('/payments/:email', verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+
+      const result = await paymentCollection.find().toArray();
+      res.send(result);
+    })
+
     app.post('/payments', async (req, res) => {
       const payment = req.body;
       const paymentResult = await paymentCollection.insertOne(payment);
