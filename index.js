@@ -2,8 +2,9 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-const stripe = require('stripe')(process.env.STRIPE_SK)
 require('dotenv').config()
+const stripe = require('stripe')(process.env.STRIPE_SK)
+
 const port = process.env.PORT || 5000;
 
 // middlewares
@@ -198,6 +199,7 @@ async function run() {
     app.post('/create-payment-intent', async (req, res) => {
       const { price } = req.body;
       const amount = parseInt(price * 100);
+      console.log(amount, 'amount inside the intent');
 
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
