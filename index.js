@@ -243,7 +243,7 @@ async function run() {
     })
 
     // stats or analytics
-    app.get('/admin-stats', async (req, res) => {
+    app.get('/admin-stats', verifyToken, verifyAdmin, async (req, res) => {
       const users = await userCollection.estimatedDocumentCount();
       const menuItems = await menuCollection.estimatedDocumentCount();
       const orders = await paymentCollection.estimatedDocumentCount();
@@ -265,6 +265,7 @@ async function run() {
 
       const revenue = result.length > 0 ? result[0]?.totalRevenue : 0;
       // const revenue = result[0]?.totalRevenue || 0;
+      // console.log('revenue: ', revenue);
 
       res.send({
         users,
@@ -274,6 +275,62 @@ async function run() {
       })
     })
 
+    // Aggregation pipeline
+    app.get('/order-stats', async (req, res) => {
+      const result = await paymentCollection.aggregate([
+        // Step 1: One document per ordered menu item
+        {
+          $unwind: "$menuItemIds"
+        },
+
+        // Step 2: Join with menu collection
+        {
+          $lookup: {
+            from: 'menu',
+            localField: 'menuItemIds',
+            foreignField: '_id',
+            as: 'menuItem'
+          }
+        },
+
+        // Step 3: menuItem is an array of one object
+        {
+          $unwind: "$menuItem"
+        },
+
+        // Step 4: Group by category
+        {
+          $group: {
+            _id: '$menuItem.category',
+            totalItemsSold: {
+              $sum: 1
+            },
+            revenue: {
+              $sum: "$menuItem.price"
+            }
+          }
+        },
+
+        // Optional formatting
+        {
+          $project: {
+            _id: 0,
+            category: '$_id',
+            totalItemsSold: 1,
+            revenue: 1
+          }
+        },
+
+        {
+          $sort: {
+            revenue: -1
+          }
+        }
+
+      ]).toArray();
+
+      res.send(result);
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
